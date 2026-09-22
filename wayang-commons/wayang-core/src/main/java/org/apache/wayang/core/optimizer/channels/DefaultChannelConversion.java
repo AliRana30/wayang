@@ -109,13 +109,23 @@ public class DefaultChannelConversion extends ChannelConversion {
                     java.lang.reflect.Method adaptTypeMethod = executionOperator.getClass().getMethod("adaptType", org.apache.wayang.core.types.DataSetType.class);
                     adaptTypeMethod.invoke(executionOperator, sourceChannelType);
                 } catch (NoSuchMethodException e) {
-                    throw new IllegalArgumentException(String.format(
-                            "Cannot convert channel %s of type %s with %s of type %s: type mismatch.",
-                            sourceChannel, sourceChannelType, executionOperator, inputType));
+                    if (!inputType.isNone() &&
+                        (inputType.getDataUnitType() == null || inputType.getDataUnitType().getTypeClass() != Void.class) &&
+                        !sourceChannelType.isNone() &&
+                        (sourceChannelType.getDataUnitType() == null || sourceChannelType.getDataUnitType().getTypeClass() != Void.class)) {
+                        throw new IllegalArgumentException(String.format(
+                                "Cannot convert channel %s of type %s with %s of type %s: type mismatch.",
+                                sourceChannel, sourceChannelType, executionOperator, inputType));
+                    }
                 } catch (Exception e) {
-                    throw new IllegalArgumentException(String.format(
-                            "Cannot convert channel %s of type %s with %s of type %s: type mismatch.",
-                            sourceChannel, sourceChannelType, executionOperator, inputType), e);
+                    if (!inputType.isNone() &&
+                        (inputType.getDataUnitType() == null || inputType.getDataUnitType().getTypeClass() != Void.class) &&
+                        !sourceChannelType.isNone() &&
+                        (sourceChannelType.getDataUnitType() == null || sourceChannelType.getDataUnitType().getTypeClass() != Void.class)) {
+                        throw new IllegalArgumentException(String.format(
+                                "Cannot convert channel %s of type %s with %s of type %s: type mismatch.",
+                                sourceChannel, sourceChannelType, executionOperator, inputType), e);
+                    }
                 }
             }
         }

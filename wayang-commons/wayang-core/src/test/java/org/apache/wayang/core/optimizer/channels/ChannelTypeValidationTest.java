@@ -40,9 +40,11 @@ class ChannelTypeValidationTest {
             super(inputType != null ? 1 : 0, outputType != null ? 1 : 0, false);
             if (inputType != null) {
                 this.inputSlots[0] = new org.apache.wayang.core.plan.wayangplan.InputSlot<>("in", this, inputType);
+                this.supportedInputChannelDescriptors.get(0).add(DummyReusableChannel.DESCRIPTOR);
             }
             if (outputType != null) {
                 this.outputSlots[0] = new org.apache.wayang.core.plan.wayangplan.OutputSlot<>("out", this, outputType);
+                this.supportedOutputChannelDescriptors.get(0).add(DummyReusableChannel.DESCRIPTOR);
             }
         }
     }
@@ -95,5 +97,37 @@ class ChannelTypeValidationTest {
                 IllegalArgumentException.class,
                 () -> conversion.convert(channel, new Configuration(), Collections.emptyList(), null)
         );
+    }
+
+    @Test
+    void testDefaultChannelConversionSucceedsWithWildcardVoidType() {
+        TypedDummyOperator producerOp = new TypedDummyOperator(null, DataSetType.createDefault(Integer.class));
+        Channel channel = new DummyReusableChannel(DummyReusableChannel.DESCRIPTOR, producerOp.getOutput(0));
+
+        DefaultChannelConversion conversion = new DefaultChannelConversion(
+                DummyReusableChannel.DESCRIPTOR,
+                DummyReusableChannel.DESCRIPTOR,
+                (ch, conf) -> new TypedDummyOperator(
+                        DataSetType.createDefault(Void.class),
+                        DataSetType.createDefault(Void.class)
+                )
+        );
+
+        assertDoesNotThrow(
+                () -> conversion.convert(channel, new Configuration(), Collections.emptyList(), null)
+        );
+    }
+
+    @Test
+    void testChannelAddConsumerSucceedsWithWildcardVoidType() {
+        TypedDummyOperator producerOp = new TypedDummyOperator(null, DataSetType.createDefault(Integer.class));
+        ExecutionTask producerTask = new ExecutionTask(producerOp);
+        Channel channel = new DummyReusableChannel(DummyReusableChannel.DESCRIPTOR, producerOp.getOutput(0));
+        producerTask.setOutputChannel(0, channel);
+
+        TypedDummyOperator consumerOp = new TypedDummyOperator(DataSetType.createDefault(Void.class), null);
+        ExecutionTask consumerTask = new ExecutionTask(consumerOp);
+
+        assertDoesNotThrow(() -> channel.addConsumer(consumerTask, 0));
     }
 }

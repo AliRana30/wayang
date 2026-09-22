@@ -124,18 +124,29 @@ public abstract class Channel {
             assert this.isReusable() || this.consumers.isEmpty() :
                     String.format("Cannot add %s as consumer of non-reusable %s, there is already %s.",
                             consumer, this, this.consumers);
-            if (this.producerSlot != null && consumer.getOperator() != null && inputIndex < consumer.getOperator().getNumInputs()) {
-                InputSlot<?> consumerInput = consumer.getOperator().getInput(inputIndex);
-                if (consumerInput != null && consumerInput.getType() != null && this.producerSlot.getType() != null) {
-                    if (!consumerInput.getType().isSupertypeOf(this.producerSlot.getType())) {
-                        try {
-                            java.lang.reflect.Method adaptTypeMethod = consumer.getOperator().getClass().getMethod("adaptType", DataSetType.class);
-                            adaptTypeMethod.invoke(consumer.getOperator(), this.producerSlot.getType());
-                        } catch (NoSuchMethodException e) {
+            this.consumers.add(consumer);
+        }
+        if (this.producerSlot != null && consumer.getOperator() != null && inputIndex < consumer.getOperator().getNumInputs()) {
+            InputSlot<?> consumerInput = consumer.getOperator().getInput(inputIndex);
+            if (consumerInput != null && consumerInput.getType() != null && this.producerSlot.getType() != null) {
+                if (!consumerInput.getType().isSupertypeOf(this.producerSlot.getType())) {
+                    try {
+                        java.lang.reflect.Method adaptTypeMethod = consumer.getOperator().getClass().getMethod("adaptType", DataSetType.class);
+                        adaptTypeMethod.invoke(consumer.getOperator(), this.producerSlot.getType());
+                    } catch (NoSuchMethodException e) {
+                        if (!consumerInput.getType().isNone() &&
+                            (consumerInput.getType().getDataUnitType() == null || consumerInput.getType().getDataUnitType().getTypeClass() != Void.class) &&
+                            !this.producerSlot.getType().isNone() &&
+                            (this.producerSlot.getType().getDataUnitType() == null || this.producerSlot.getType().getDataUnitType().getTypeClass() != Void.class)) {
                             throw new IllegalArgumentException(String.format(
                                     "Cannot add consumer %s (input %d type %s) to channel %s with producer type %s: mismatching types.",
                                     consumer, inputIndex, consumerInput.getType(), this, this.producerSlot.getType()));
-                        } catch (Exception e) {
+                        }
+                    } catch (Exception e) {
+                        if (!consumerInput.getType().isNone() &&
+                            (consumerInput.getType().getDataUnitType() == null || consumerInput.getType().getDataUnitType().getTypeClass() != Void.class) &&
+                            !this.producerSlot.getType().isNone() &&
+                            (this.producerSlot.getType().getDataUnitType() == null || this.producerSlot.getType().getDataUnitType().getTypeClass() != Void.class)) {
                             throw new IllegalArgumentException(String.format(
                                     "Cannot add consumer %s (input %d type %s) to channel %s with producer type %s: type mismatch.",
                                     consumer, inputIndex, consumerInput.getType(), this, this.producerSlot.getType()), e);
@@ -143,7 +154,8 @@ public abstract class Channel {
                     }
                 }
             }
-            this.consumers.add(consumer);
+        }
+        if (consumer.getInputChannel(inputIndex) != this) {
             consumer.setInputChannel(inputIndex, this);
         }
     }
